@@ -81,11 +81,11 @@ const Footer: React.FC = () => {
                     <ul className="space-y-5 text-sm text-[#fae894]/90">
                         <li className="flex items-start">
                             <LocationIcon />
-                            <span>Rua Fictícia, 123, Bairro Imaginário, Cidade Exemplo - SP</span>
+                            <span>Rua Fiel Carlos de Jesus, 1928 - Jardim Maravilha, São Paulo/SP</span>
                         </li>
                         <li className="flex items-center">
                             <PhoneIcon />
-                            <a href="tel:+5511999999999" className="hover:text-[#169d99] transition-colors duration-300">(11) 99999-9999</a>
+                            <a href="tel:+5562991619560" className="hover:text-[#169d99] transition-colors duration-300">(62) 99161-9560</a>
                         </li>
                         <li className="flex items-center">
                             <MailIcon />
