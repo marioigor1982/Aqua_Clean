@@ -127,14 +127,14 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: Use process.env.API_KEY as per guidelines, which fixes the TypeScript error and adheres to API key handling rules.
-            const apiKey = process.env.API_KEY;
+            // FIX: Vercel requires env vars to be prefixed with NEXT_PUBLIC_ to be exposed to the browser.
+            const apiKey = process.env.NEXT_PUBLIC_API_KEY;
             if (!apiKey) {
                 setMessages([
                     ...initialMessages,
                     {
                         role: 'model',
-                        text: '<strong>Erro de Configuração:</strong> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <strong>API_KEY</strong> está configurada corretamente no seu provedor de hospedagem.'
+                        text: '<strong>Erro de Configuração:</strong> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <strong>NEXT_PUBLIC_API_KEY</strong> está configurada corretamente no seu provedor de hospedagem (Vercel).'
                     }
                 ]);
                 return;
