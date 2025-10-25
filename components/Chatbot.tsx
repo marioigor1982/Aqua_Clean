@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
@@ -127,13 +126,13 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: Obtain API key from process.env.API_KEY as per guidelines.
+            // FIX: Use process.env.API_KEY as per the coding guidelines.
             const apiKey = process.env.API_KEY;
 
             if (!apiKey) {
                 setMessages([
                     ...initialMessages,
-                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <code>API_KEY</code> está configurada corretamente.' }
+                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <code>API_KEY</code> está configurada.' }
                 ]);
                 return;
             }
