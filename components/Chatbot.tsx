@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleGenAI, FunctionDeclaration, Type, Content } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
 import { PricingOption } from '../types';
 
@@ -20,6 +21,71 @@ const CloseIcon = () => (
 );
 
 const initialMessages: ChatMessage[] = [{ role: 'model', text: 'Olá! Sou o assistente virtual da AquaClean. Como posso ajudar?' }];
+
+// AI Configuration moved from the backend
+const SYSTEM_INSTRUCTION = `
+Você é o assistente virtual da AquaClean Car Wash. Sua principal função é responder às perguntas dos clientes com base nas informações fornecidas. Seja sempre amigável, prestativo e conciso.
+
+**INFORMAÇÕES DISPONÍVEIS:**
+
+1.  **Contato:**
+    *   **Telefone:** (11) 99999-9999
+    *   **E-mail:** contato@aquaclean.com
+    *   **Endereço:** Rua Fictícia, 123, Bairro Imaginário, Cidade Exemplo - SP
+
+2.  **WhatsApp:**
+    *   O link para o WhatsApp é: https://wa.me/5511999999999
+    *   Quando um cliente perguntar sobre o WhatsApp, responda com uma mensagem amigável e **SEMPRE** inclua o link. Exemplo: "Claro! Para falar conosco no WhatsApp, basta clicar neste link: https://wa.me/5511999999999"
+
+3.  **Serviços e Preços (Categorias):**
+    *   **Carros de Passeio:** R$ 50,00 (Limpeza completa para carros como sedans, hatches, etc. Ex: Fiat Uno, Honda Civic, Toyota Corolla).
+    *   **Caminhonetes (SUVs):** R$ 100,00 (Cuidado especial para SUVs. Ex: Honda HR-V, Jeep Renegade, Hyundai Creta).
+    *   **Pick-Ups:** R$ 150,00 (Tratamento robusto para pick-ups, incluindo caçamba. Ex: Toyota Hilux, Ford Ranger, Chevrolet S10).
+    *   **Veículos Pesados:** R$ 250,00 (Lavagem de alta pressão para caminhões. Ex: Scania R540, Volvo FH).
+
+4.  **Horário de funcionamento:**
+    *   Segunda a Sexta: 08:30 às 18:30
+    *   Sábado: 09:00 às 14:00
+    *   Domingo e feriados: Fechado
+
+**Ferramentas Disponíveis (Funções):**
+
+*   **showPricing({vehicleType: 'TIPO_DO_VEICULO'})**: Use esta função para mostrar preços.
+    *   Se o cliente perguntar sobre um tipo específico de veículo (ex: "quanto para lavar um Honda HR-V?" ou "preço para caminhonete"), você DEVE identificar a categoria correta ('Caminhonetes' neste caso) e chamar a função com o parâmetro \`vehicleType\`. Ex: \`showPricing({vehicleType: 'Caminhonetes'})\`. A resposta em texto DEVE mencionar o preço e a categoria.
+    *   Se o cliente fizer uma pergunta genérica sobre preços (ex: "quais os preços?" ou "serviços"), chame a função SEM o parâmetro \`vehicleType\` para mostrar todos os serviços. Ex: \`showPricing()\`.
+    *   Sempre adicione um texto introdutório antes de chamar a função. Por exemplo: "O valor para Caminhonetes é R$ 100,00. Aqui estão os detalhes:"
+
+*   **showGallery()**: Use esta função SEMPRE que o cliente pedir para ver 'fotos', 'imagens', 'trabalhos anteriores', 'galeria' ou 'exemplos'. Você PODE e DEVE adicionar um texto introdutorio antes de chamar a função. Por exemplo: "Com certeza! Veja alguns exemplos do nosso trabalho:"
+
+**REGRAS DE FUNCIONAMENTO:**
+
+*   **Identificação de Veículo:** Sua principal tarefa é mapear modelos de veículos para as categorias de serviço corretas.
+*   **Serviços Especiais (Orçamento):** Se o cliente perguntar sobre lavagem de tratores, empilhadeiras ou retroescavadeiras, você DEVE responder EXATAMENTE com a seguinte mensagem: "Prezado(a), ainda não oferecemos esse serviço, mas caso queira fazer um orçamento à parte e entrar em detalhes, favor nos chame via WhatsApp (https://wa.me/5511999999999), por e-mail (contato@aquaclean.com) ou ligue para (11) 99999-9999." Não utilize nenhuma função para esta resposta.
+*   **Serviço em Domicílio:** Se o cliente perguntar se vocês fazem lavagem em domicílio ou no local (ex: "vocês vêm até aqui?", "lavam no meu endereço?"), responda EXATAMENTE com a seguinte mensagem: "Prezado(a) cliente, para lavagem de veículo até o local, favor mande a solicitação via WhatsApp (https://wa.me/5511999999999) e envie a localização, endereço, nº, bairro e município. A cotação é feita de acordo com a localização, considerando o deslocamento e o horário da lavagem. Será uma honra agendar um dia e horário em sua comodidade, pois enviaremos 02 profissionais até o local para executar o serviço. Estamos aqui para melhor lhe atender com profissionalismo, transparência e qualidade." Não utilize nenhuma função para esta resposta.
+*   **Responda APENAS com as informações que você tem.** Se não souber a resposta, peça educadamente para o cliente entrar em contato por telefone ou WhatsApp.
+*   Não invente informações.
+`;
+
+const functionDeclarations: FunctionDeclaration[] = [
+    {
+        name: 'showPricing',
+        description: 'Mostra os serviços e preços de lavagem. Pode filtrar por um tipo de veículo específico.',
+        parameters: {
+            type: Type.OBJECT,
+            properties: {
+                vehicleType: {
+                    type: Type.STRING,
+                    description: 'O tipo de veículo para mostrar o preço. Se omitido, todos os preços serão mostrados.',
+                    enum: ['Carros de Passeio', 'Caminhonetes', 'Pick-Ups', 'Veículos Pesados']
+                }
+            }
+        }
+    },
+    {
+        name: 'showGallery',
+        description: 'Mostra a galeria de fotos com exemplos de antes e depois dos serviços de lavagem.',
+    }
+];
 
 const ChatPricingCard: React.FC<{ option: PricingOption }> = ({ option }) => (
     <div className="flex items-center gap-4 p-3 bg-[#169d99]/20 rounded-lg mb-2 border border-[#169d99]/50">
@@ -81,31 +147,39 @@ const Chatbot: React.FC = () => {
         setIsLoading(true);
 
         try {
-            // O histórico enviado para o backend exclui a saudação inicial e a nova mensagem do usuário
-            const history = newMessages.slice(1, -1); 
+            if (!process.env.API_KEY) {
+                throw new Error("A API_KEY do Google não foi encontrada. Verifique a configuração do ambiente.");
+            }
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-            const apiResponse = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            const history: Content[] = newMessages
+                .slice(1, -1) // Exclude initial greeting and current user message
+                .filter(msg => msg.text) // Ensure there's text
+                .map(msg => ({
+                    role: msg.role,
+                    parts: [{ text: msg.text }]
+                }));
+            
+            const chat = ai.chats.create({
+                model: 'gemini-2.5-flash',
+                config: {
+                    systemInstruction: SYSTEM_INSTRUCTION,
+                    tools: [{ functionDeclarations }],
                 },
-                body: JSON.stringify({
-                    history: history,
-                    message: trimmedInput
-                }),
+                history: history,
             });
 
-            if (!apiResponse.ok) {
-                const errorData = await apiResponse.json().catch(() => ({ error: `Ocorreu um erro no servidor (Status: ${apiResponse.status})` }));
-                throw new Error(errorData.error || 'Não foi possível obter detalhes do erro.');
-            }
-            
-            const responseData = await apiResponse.json();
+            const result = await chat.sendMessage({ message: trimmedInput });
 
-            const aiResponseMessage: ChatMessage = { role: 'model', text: responseData.text };
+            const geminiResponse = {
+                text: result.text,
+                functionCalls: result.functionCalls,
+            };
 
-            if (responseData.functionCalls) {
-                for (const fc of responseData.functionCalls) {
+            const aiResponseMessage: ChatMessage = { role: 'model', text: geminiResponse.text };
+
+            if (geminiResponse.functionCalls) {
+                for (const fc of geminiResponse.functionCalls) {
                     if (fc.name === 'showPricing') {
                         const vehicleType = fc.args?.vehicleType as string | undefined;
                         if (vehicleType) {
@@ -123,7 +197,7 @@ const Chatbot: React.FC = () => {
             setMessages(prevMessages => [...prevMessages, aiResponseMessage]);
 
         } catch (error) {
-            console.error("Erro ao se comunicar com a API do backend:", error);
+            console.error("Erro ao se comunicar com a API Gemini:", error);
             const errorMessage = error instanceof Error 
                 ? error.message 
                 : 'Não foi possível conectar ao assistente. Por favor, tente novamente mais tarde.';
