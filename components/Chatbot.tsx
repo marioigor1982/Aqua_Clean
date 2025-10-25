@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
@@ -126,7 +128,8 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            // Fix: Replaced import.meta.env.VITE_API_KEY with process.env.API_KEY and removed the unnecessary check, as per the coding guidelines.
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             chatRef.current = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
