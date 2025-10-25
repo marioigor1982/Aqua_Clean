@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
@@ -54,7 +53,7 @@ Você é o assistente virtual da AquaClean Car Wash. Sua principal função é r
     *   Se o cliente fizer uma pergunta genérica sobre preços (ex: "quais os preços?" ou "serviços"), chame a função SEM o parâmetro \`vehicleType\` para mostrar todos os serviços. Ex: \`showPricing()\`.
     *   Sempre adicione um texto introdutório antes de chamar a função. Por exemplo: "O valor para Caminhonetes é R$ 100,00. Aqui estão os detalhes:"
 
-*   **showGallery()**: Use esta função SEMPRE que o cliente pedir para ver 'fotos', 'imagens', 'trabalhos anteriores', 'galeria' ou 'exemplos'. Você PODE e DEVE adicionar um texto introdutório antes de chamar a função. Por exemplo: "Com certeza! Veja alguns exemplos do nosso trabalho:"
+*   **showGallery()**: Use esta função SEMPRE que o cliente pedir para ver 'fotos', 'imagens', 'trabalhos anteriores', 'galeria' ou 'exemplos'. Você PODE e DEVE adicionar um texto introdutorio antes de chamar a função. Por exemplo: "Com certeza! Veja alguns exemplos do nosso trabalho:"
 
 **REGRAS DE FUNCIONAMENTO:**
 
@@ -128,7 +127,8 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // Fix: Replaced import.meta.env.VITE_API_KEY with process.env.API_KEY and removed the unnecessary check, as per the coding guidelines.
+            // FIX: Correctly initialize GoogleGenAI using `process.env.API_KEY` as per the coding guidelines.
+            // The previous use of `import.meta.env.VITE_API_KEY` was incorrect and caused a TypeScript error.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             chatRef.current = ai.chats.create({
                 model: 'gemini-2.5-flash',
