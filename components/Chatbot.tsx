@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
@@ -127,14 +128,15 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: Vercel requires env vars to be prefixed with NEXT_PUBLIC_ to be exposed to the browser.
-            const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+            // FIX: Use process.env.API_KEY as per the guidelines. `import.meta.env` is not standard and can cause issues.
+            const apiKey = process.env.API_KEY;
             if (!apiKey) {
                 setMessages([
                     ...initialMessages,
                     {
                         role: 'model',
-                        text: '<strong>Erro de Configuração:</strong> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <strong>NEXT_PUBLIC_API_KEY</strong> está configurada corretamente no seu provedor de hospedagem (Vercel).'
+                        // FIX: Updated error message to reference API_KEY.
+                        text: '<strong>Erro de Configuração:</strong> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <strong>API_KEY</strong> está configurada corretamente.'
                     }
                 ]);
                 return;
