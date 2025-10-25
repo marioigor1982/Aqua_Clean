@@ -127,10 +127,18 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: The API key must be obtained from `process.env.API_KEY` and used directly.
-            // This change aligns with the coding guidelines and resolves the TypeScript error
-            // on `import.meta.env`. The presence of the API key is assumed.
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            // @ts-ignore
+            const apiKey = process.env.API_KEY;
+
+            if (!apiKey) {
+                setMessages([
+                    ...initialMessages,
+                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente `API_KEY` (sem nenhum prefixo) está configurada corretamente no seu provedor de hospedagem (Vercel).' }
+                ]);
+                return;
+            }
+
+            const ai = new GoogleGenAI({ apiKey });
             chatRef.current = ai.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
@@ -143,6 +151,7 @@ const Chatbot: React.FC = () => {
                 setMessages(initialMessages);
                 setInputValue('');
                 setIsLoading(false);
+                chatRef.current = null;
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -262,7 +271,7 @@ const Chatbot: React.FC = () => {
                             className="w-full bg-transparent text-white placeholder-[#fae894]/50 px-4 py-2 focus:outline-none"
                             disabled={isLoading}
                         />
-                        <button type="submit" aria-label="Enviar mensagem" className="p-3 text-white disabled:text-gray-500 hover:text-[#b9cc01] transition-colors" disabled={isLoading}>
+                        <button type="submit" aria-label="Enviar mensagem" className="p-3 text-white disabled:text-gray-500 hover:text-[#b9cc01] transition-colors" disabled={isLoading || !chatRef.current}>
                             <SendIcon />
                         </button>
                     </div>
