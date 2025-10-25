@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { PRICING_DATA, galleryImages } from '../constants';
 import { PricingOption } from '../types';
@@ -136,6 +137,27 @@ const Chatbot: React.FC = () => {
             setIsLoading(false);
         }
     };
+    
+    const formatMessageText = (text: string) => {
+        const linkify = (inputText: string) => {
+            const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            const emailPattern = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+
+            let linkedText = inputText.replace(urlPattern, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#00eaff] hover:underline">${url}</a>`;
+            });
+            
+            linkedText = linkedText.replace(emailPattern, (email) => {
+                if (linkedText.includes(`href="mailto:${email}"`)) return email;
+                return `<a href="mailto:${email}" class="text-[#00eaff] hover:underline">${email}</a>`;
+            });
+
+            return linkedText;
+        };
+        
+        const linkedText = linkify(text);
+        return linkedText.replace(/\n/g, '<br />');
+    };
 
 
     return (
@@ -170,7 +192,7 @@ const Chatbot: React.FC = () => {
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] rounded-lg px-4 py-2 shadow ${msg.role === 'user' ? 'bg-[#169d99] text-white rounded-br-none' : 'bg-[#070743] text-[#fae894] rounded-bl-none'}`}>
-                                {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br />') }} />}
+                                {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
                                 {msg.pricing && (
                                     <div className="mt-3">
                                         {msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}
