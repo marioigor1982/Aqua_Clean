@@ -96,8 +96,8 @@ const Chatbot: React.FC = () => {
             });
 
             if (!apiResponse.ok) {
-                const errorData = await apiResponse.json().catch(() => ({ error: 'Não foi possível ler a resposta de erro.' }));
-                throw new Error(errorData.error || `Erro ${apiResponse.status}`);
+                const errorData = await apiResponse.json().catch(() => ({ error: `Ocorreu um erro no servidor (Status: ${apiResponse.status})` }));
+                throw new Error(errorData.error || 'Não foi possível obter detalhes do erro.');
             }
             
             const responseData = await apiResponse.json();
@@ -124,7 +124,14 @@ const Chatbot: React.FC = () => {
 
         } catch (error) {
             console.error("Erro ao se comunicar com a API do backend:", error);
-            setMessages(prevMessages => [...prevMessages, { role: 'model', text: 'Desculpe, estou com problemas para me conectar. Tente novamente mais tarde ou entre em contato pelo nosso WhatsApp.' }]);
+            const errorMessage = error instanceof Error 
+                ? error.message 
+                : 'Não foi possível conectar ao assistente. Por favor, tente novamente mais tarde.';
+            
+            setMessages(prevMessages => [...prevMessages, { 
+                role: 'model', 
+                text: `Desculpe, ocorreu um erro. Tente novamente.\n\nDetalhes técnicos: ${errorMessage}` 
+            }]);
         } finally {
             setIsLoading(false);
         }
