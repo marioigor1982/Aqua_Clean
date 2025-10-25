@@ -127,8 +127,9 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // FIX: Correctly initialize GoogleGenAI using `process.env.API_KEY` as per the coding guidelines.
-            // The previous use of `import.meta.env.VITE_API_KEY` was incorrect and caused a TypeScript error.
+            // FIX: The API key must be obtained from `process.env.API_KEY` and used directly.
+            // This change aligns with the coding guidelines and resolves the TypeScript error
+            // on `import.meta.env`. The presence of the API key is assumed.
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             chatRef.current = ai.chats.create({
                 model: 'gemini-2.5-flash',
