@@ -126,7 +126,7 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // Fix: Use process.env.API_KEY as per guidelines.
+            // Fix: Per coding guidelines, API key must be from process.env.API_KEY. This also resolves the TypeScript error.
             const apiKey = process.env.API_KEY;
             if (!apiKey) {
                 setMessages([
