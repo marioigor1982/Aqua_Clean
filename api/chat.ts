@@ -109,7 +109,13 @@ export default async function handler(req: Request) {
 
     const result = await chat.sendMessage({ message });
 
-    return new Response(JSON.stringify(result), {
+    // Simplifica a resposta antes de enviá-la ao frontend
+    const simplifiedResponse = {
+        text: result.text,
+        functionCalls: result.functionCalls,
+    };
+
+    return new Response(JSON.stringify(simplifiedResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
