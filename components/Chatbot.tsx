@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, FunctionDeclaration, Type } from '@google/genai';
 import { PRICING_DATA, galleryImages } from '../constants';
@@ -126,7 +127,7 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // Fix: Per coding guidelines, API key must be from process.env.API_KEY. This also resolves the TypeScript error.
+            // FIX: Use process.env.API_KEY as per guidelines, which fixes the TypeScript error and adheres to API key handling rules.
             const apiKey = process.env.API_KEY;
             if (!apiKey) {
                 setMessages([
