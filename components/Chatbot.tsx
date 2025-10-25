@@ -126,13 +126,15 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // Fix: Adhere to Gemini API guidelines by using process.env.API_KEY. This resolves the TypeScript error and aligns with the project's requirements.
+            // Fix: Use process.env.API_KEY as per guidelines.
             const apiKey = process.env.API_KEY;
-
             if (!apiKey) {
                 setMessages([
                     ...initialMessages,
-                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <code>API_KEY</code> está configurada corretamente no seu provedor de hospedagem.' }
+                    {
+                        role: 'model',
+                        text: '<strong>Erro de Configuração:</strong> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <strong>API_KEY</strong> está configurada corretamente no seu provedor de hospedagem.'
+                    }
                 ]);
                 return;
             }
