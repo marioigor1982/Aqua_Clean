@@ -127,13 +127,13 @@ const Chatbot: React.FC = () => {
 
     useEffect(() => {
         if (isOpen) {
-            // @ts-ignore
+            // FIX: Obtain API key from process.env.API_KEY as per guidelines.
             const apiKey = process.env.API_KEY;
 
             if (!apiKey) {
                 setMessages([
                     ...initialMessages,
-                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente `API_KEY` (sem nenhum prefixo) está configurada corretamente no seu provedor de hospedagem (Vercel).' }
+                    { role: 'model', text: '<b>Erro de Configuração:</b> A chave da API não foi encontrada. Por favor, certifique-se de que a variável de ambiente <code>API_KEY</code> está configurada corretamente.' }
                 ]);
                 return;
             }
