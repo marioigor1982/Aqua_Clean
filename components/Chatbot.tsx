@@ -19,6 +19,8 @@ interface ChatMessage {
     whatsAppLink?: string;
     paymentInfo?: boolean;
     promptForEndChat?: boolean;
+    complaintOptions?: boolean;
+    ratingPrompt?: boolean;
 }
 
 const SendIcon = () => (
@@ -96,6 +98,61 @@ const ChatPaymentInfoCard: React.FC = () => (
     </div>
 );
 
+const ChatComplaintCard: React.FC<{ onSelect: (type: string) => void }> = ({ onSelect }) => {
+    const complaintTypes = ['Atendimento', 'Financeiro', 'Serviço (Sujeira ou Avaria)', 'Atraso', 'Outro'];
+    const whatsAppComplaintText = encodeURIComponent("Olá, gostaria de fazer uma reclamação.");
+    const whatsAppLink = `https://wa.me/5562991619560?text=${whatsAppComplaintText}`;
+    
+    return (
+        <div className="p-3 bg-[#ab0768]/20 rounded-lg mt-3 border border-[#ab0768]/50 space-y-2">
+            {complaintTypes.map(type => (
+                <button 
+                    key={type} 
+                    onClick={() => onSelect(type)}
+                    className="w-full text-left text-sm bg-[#fae894]/20 text-white font-bold py-2 px-3 rounded-md hover:bg-[#fae894]/40 transition-all"
+                >
+                    {type}
+                </button>
+            ))}
+            <a 
+                href={whatsAppLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-full text-sm bg-[#25D366] text-white font-bold py-2 px-3 rounded-md hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 mt-2"
+            >
+                <WhatsAppIcon className="h-4 w-4" />
+                Enviar Reclamação via WhatsApp
+            </a>
+        </div>
+    );
+};
+
+const ChatRatingCard: React.FC<{ onSelect: (rating: string) => void }> = ({ onSelect }) => {
+    const ratings = [
+        { score: 5, label: 'Excelente', icon: '⭐⭐⭐⭐⭐' },
+        { score: 4, label: 'Ótimo', icon: '⭐⭐⭐⭐' },
+        { score: 3, label: 'Bom', icon: '⭐⭐⭐' },
+        { score: 2, label: 'Razoável', icon: '⭐⭐' },
+        { score: 1, label: 'Ruim', icon: '⭐' },
+        { score: 0, label: 'Péssimo', icon: '👎' }
+    ];
+
+    return (
+        <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50 space-y-2">
+            {ratings.map(({ score, label, icon }) => (
+                <button 
+                    key={score}
+                    onClick={() => onSelect(`Minha avaliação: ${score} - ${label} ${icon}`)}
+                    className="w-full text-left text-sm bg-[#fae894]/20 text-white font-semibold py-2 px-3 rounded-md hover:bg-[#fae894]/40 transition-all flex justify-between items-center"
+                >
+                    <span>{label}</span>
+                    <span>{icon}</span>
+                </button>
+            ))}
+        </div>
+    );
+};
+
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -129,99 +186,10 @@ const Chatbot: React.FC = () => {
         }
     }, [isOpen]);
 
-    const handleConfirmScheduling = () => {
-        setMessages(prev => prev.map((msg, index) => {
-            if (index === prev.length - 1) {
-                return { ...msg, promptForScheduling: false };
-            }
-            return msg;
-        }));
-
-        const nextMessage: ChatMessage = {
-            role: 'model',
-            text: 'Ótimo! Para continuarmos, qual o seu nome?'
-        };
-        setMessages(prev => [...prev, nextMessage]);
-        setConversationState('awaiting_name');
-    };
-
-    const handleDenyScheduling = () => {
-        setMessages(prev => prev.map((msg, index) => {
-            if (index === prev.length - 1) {
-                return { ...msg, promptForScheduling: false };
-            }
-            return msg;
-        }));
-
-        const nextMessage: ChatMessage = {
-            role: 'model',
-            text: 'Ok então, precisando de mais informações estarei por aqui para ajudar! Caso tenha mais alguma dúvida, você pode nos chamar no WhatsApp: https://wa.me/5562991619560 ou ligar para (62) 99161-9560.\n\nDeseja encerrar o atendimento?',
-            promptForEndChat: true,
-        };
-        setMessages(prev => [...prev, nextMessage]);
-        setConversationState('awaiting_end_confirmation');
-        setLastCalculation(null);
-    };
-
-    const handleConfirmEndChat = () => {
-        setIsOpen(false);
-    };
-
-    const handleDenyEndChat = () => {
-        setMessages(prev => prev.map((msg, index) => {
-            if (index === prev.length - 1) {
-                return { ...msg, promptForEndChat: false };
-            }
-            return msg;
-        }));
-
-        const nextMessage: ChatMessage = {
-            role: 'model',
-            text: 'Ok, sem problemas. Como mais posso ajudar?'
-        };
-        setMessages(prev => [...prev, nextMessage]);
-        setConversationState('idle');
-    };
-
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const trimmedInput = inputValue.trim();
-        if (!trimmedInput || isLoading) return;
-
-        const userMessage: ChatMessage = { role: 'user', text: trimmedInput };
-        setMessages(prev => [...prev, userMessage]);
-        setInputValue('');
-
-        if (conversationState === 'awaiting_name') {
-            setIsLoading(true);
-            const clientName = trimmedInput;
-            
-            setTimeout(() => {
-                if (lastCalculation) {
-                    const itemsText = lastCalculation.items.map(item => `${item.quantity}x ${item.option.vehicleType}`).join(' e ');
-                    const totalText = `R$ ${lastCalculation.total.toFixed(2).replace('.', ',')}`;
-                    
-                    const whatsAppMessage = `Olá, meu nome é ${clientName}. Gostaria de agendar a lavagem para: ${itemsText}. O orçamento total foi de ${totalText}. Vocês têm disponibilidade?`;
-                    const whatsAppUrl = `https://wa.me/5562991619560?text=${encodeURIComponent(whatsAppMessage)}`;
-
-                    const confirmationMessage: ChatMessage = {
-                        role: 'model',
-                        text: `Obrigado, ${clientName}! Sua solicitação de agendamento está pronta. Clique no botão abaixo para enviá-la pelo WhatsApp e finalizar.`,
-                        whatsAppLink: whatsAppUrl
-                    };
-                    setMessages(prev => [...prev, confirmationMessage]);
-                }
-                setConversationState('idle');
-                setLastCalculation(null);
-                setIsLoading(false);
-            }, 1000); // Simulate thinking
-            return;
-        }
-
+    const callChatApi = async (messageText: string) => {
         setIsLoading(true);
-
         try {
-            const history = messages.slice(1, -1).map(msg => ({
+            const history = messages.slice(1).map(msg => ({
                 role: msg.role,
                 text: msg.text,
             }));
@@ -231,7 +199,7 @@ const Chatbot: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     history,
-                    message: trimmedInput,
+                    message: messageText,
                 }),
             });
             
@@ -285,6 +253,12 @@ const Chatbot: React.FC = () => {
                     if (fc.name === 'showPaymentMethods') {
                         aiResponseMessage.paymentInfo = true;
                     }
+                    if (fc.name === 'handleComplaint') {
+                        aiResponseMessage.complaintOptions = true;
+                    }
+                    if (fc.name === 'promptForRating') {
+                        aiResponseMessage.ratingPrompt = true;
+                    }
                 }
             }
             
@@ -297,6 +271,80 @@ const Chatbot: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleQuickReply = (text: string, originalMessageUpdater: (msg: ChatMessage) => ChatMessage) => {
+        setMessages(prev => prev.map((msg, index) => 
+            index === prev.length - 1 ? originalMessageUpdater(msg) : msg
+        ));
+        
+        const userMessage: ChatMessage = { role: 'user', text };
+        setMessages(prev => [...prev, userMessage]);
+        callChatApi(text);
+    };
+
+    const handleComplaintSelection = (complaintType: string) => {
+        handleQuickReply(`Minha reclamação é sobre: ${complaintType}`, msg => ({...msg, complaintOptions: false}));
+    };
+
+    const handleRatingSelection = (ratingText: string) => {
+        handleQuickReply(ratingText, msg => ({...msg, ratingPrompt: false}));
+    };
+
+    const handleConfirmScheduling = () => {
+        handleQuickReply('Sim, desejo agendar.', msg => ({...msg, promptForScheduling: false}));
+        setConversationState('awaiting_name');
+    };
+
+    const handleDenyScheduling = () => {
+        handleQuickReply('Não, obrigado.', msg => ({...msg, promptForScheduling: false}));
+        setConversationState('awaiting_end_confirmation');
+        setLastCalculation(null);
+    };
+
+    const handleConfirmEndChat = () => setIsOpen(false);
+
+    const handleDenyEndChat = () => {
+        handleQuickReply('Não, tenho outra dúvida.', msg => ({...msg, promptForEndChat: false}));
+        setConversationState('idle');
+    };
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedInput = inputValue.trim();
+        if (!trimmedInput || isLoading) return;
+
+        const userMessage: ChatMessage = { role: 'user', text: trimmedInput };
+        setMessages(prev => [...prev, userMessage]);
+        setInputValue('');
+
+        if (conversationState === 'awaiting_name') {
+            setIsLoading(true);
+            const clientName = trimmedInput;
+            
+            setTimeout(() => {
+                if (lastCalculation) {
+                    const itemsText = lastCalculation.items.map(item => `${item.quantity}x ${item.option.vehicleType}`).join(' e ');
+                    const totalText = `R$ ${lastCalculation.total.toFixed(2).replace('.', ',')}`;
+                    
+                    const whatsAppMessage = `Olá, meu nome é ${clientName}. Gostaria de agendar a lavagem para: ${itemsText}. O orçamento total foi de ${totalText}. Vocês têm disponibilidade?`;
+                    const whatsAppUrl = `https://wa.me/5562991619560?text=${encodeURIComponent(whatsAppMessage)}`;
+
+                    const confirmationMessage: ChatMessage = {
+                        role: 'model',
+                        text: `Obrigado, ${clientName}! Sua solicitação de agendamento está pronta. Clique no botão abaixo para enviá-la pelo WhatsApp e finalizar.`,
+                        whatsAppLink: whatsAppUrl
+                    };
+                    setMessages(prev => [...prev, confirmationMessage]);
+                }
+                setConversationState('idle');
+                setLastCalculation(null);
+                setIsLoading(false);
+            }, 1000);
+            return;
+        }
+
+        callChatApi(trimmedInput);
     };
     
     const formatMessageText = (text: string) => {
@@ -361,6 +409,8 @@ const Chatbot: React.FC = () => {
                                     )}
                                     {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
                                     {msg.paymentInfo && <ChatPaymentInfoCard />}
+                                    {msg.complaintOptions && <ChatComplaintCard onSelect={handleComplaintSelection} />}
+                                    {msg.ratingPrompt && <ChatRatingCard onSelect={handleRatingSelection} />}
                                     {msg.promptForScheduling && (
                                         <div className="mt-3 pt-3 border-t border-[#169d99]/50">
                                             <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>
