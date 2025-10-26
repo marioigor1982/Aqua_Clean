@@ -17,6 +17,7 @@ interface ChatMessage {
     calculation?: CalculationDetails;
     promptForScheduling?: boolean;
     whatsAppLink?: string;
+    paymentInfo?: boolean;
 }
 
 const SendIcon = () => (
@@ -78,6 +79,22 @@ const ChatCalculationCard: React.FC<{ calculation: CalculationDetails }> = ({ ca
     </div>
 );
 
+const ChatPaymentInfoCard: React.FC = () => (
+    <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50 space-y-3">
+        <div>
+            <p className="text-white font-semibold">Aceitamos cartões de débito e crédito de todas as bandeiras:</p>
+            <img src="https://i.postimg.cc/y88bJQjd/e15d406ed2e0898720bc435a5257550f.jpg" alt="Bandeiras de cartão aceitas" className="mt-2 rounded-md w-full" />
+        </div>
+        <div>
+            <p className="text-white font-semibold">Aceitamos PIX:</p>
+            <img src="https://i.postimg.cc/PJdMgJVR/pix-bc-logo-0.png" alt="Logo PIX" className="mt-2 rounded-md bg-white p-2 w-24" />
+        </div>
+        <div className="pt-2 border-t border-[#169d99]/50">
+            <p className="text-xs text-white/80"><span className="font-bold">Obs.:</span> Não geramos boleto bancário e não aceitamos cheque.</p>
+        </div>
+    </div>
+);
+
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -135,7 +152,7 @@ const Chatbot: React.FC = () => {
 
         const nextMessage: ChatMessage = {
             role: 'model',
-            text: 'Entendido. Posso ajudar em algo mais?'
+            text: 'De nada! Para agendar, ou se tiver mais alguma dúvida, você pode nos chamar no WhatsApp: https://wa.me/5562991619560 ou ligar para (62) 99161-9560.'
         };
         setMessages(prev => [...prev, nextMessage]);
         setConversationState('idle');
@@ -206,7 +223,18 @@ const Chatbot: React.FC = () => {
                 for (const fc of geminiResponse.functionCalls) {
                     if (fc.name === 'showPricing') {
                         const vehicleType = fc.args?.vehicleType as string | undefined;
-                        aiResponseMessage.pricing = vehicleType ? PRICING_DATA.filter(p => p.vehicleType === vehicleType) : PRICING_DATA;
+                        const pricingOptions = vehicleType ? PRICING_DATA.filter(p => p.vehicleType === vehicleType) : PRICING_DATA;
+                        aiResponseMessage.pricing = pricingOptions;
+
+                        if (vehicleType && pricingOptions.length > 0) {
+                            const option = pricingOptions[0];
+                            const calculationDetails: CalculationDetails = {
+                                items: [{ option, quantity: 1 }],
+                                total: option.price
+                            };
+                            aiResponseMessage.promptForScheduling = true;
+                            setLastCalculation(calculationDetails);
+                        }
                     }
                     if (fc.name === 'showGallery') {
                         aiResponseMessage.gallery = galleryImages;
@@ -229,6 +257,9 @@ const Chatbot: React.FC = () => {
                         aiResponseMessage.calculation = calculationDetails;
                         aiResponseMessage.promptForScheduling = true;
                         setLastCalculation(calculationDetails);
+                    }
+                    if (fc.name === 'showPaymentMethods') {
+                        aiResponseMessage.paymentInfo = true;
                     }
                 }
             }
@@ -282,6 +313,7 @@ const Chatbot: React.FC = () => {
                                 {msg.pricing && <div className="mt-3">{msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}</div>}
                                 {msg.gallery && <div className="mt-3 grid grid-cols-2 gap-2">{msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}</div>}
                                 {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
+                                {msg.paymentInfo && <ChatPaymentInfoCard />}
                                 {msg.promptForScheduling && (
                                     <div className="mt-3 pt-3 border-t border-[#169d99]/50">
                                         <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>

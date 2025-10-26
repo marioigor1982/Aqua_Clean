@@ -37,6 +37,11 @@ Você é o assistente virtual da AquaClean Car Wash. Sua principal função é r
     *   Sábado: 09:00 às 14:00
     *   Domingo e feriados: Fechado
 
+5.  **Formas de Pagamento:**
+    *   **Cartões:** Débito e Crédito de todas as bandeiras.
+    *   **PIX:** Aceito.
+    *   **Não aceitos:** Boleto bancário e cheque.
+
 **Ferramentas Disponíveis (Funções):**
 
 *   **showPricing({vehicleType: 'TIPO_DO_VEICULO'})**: Use esta função para mostrar preços.
@@ -51,6 +56,8 @@ Você é o assistente virtual da AquaClean Car Wash. Sua principal função é r
     *   Mapeie os tipos de veículo para os parâmetros da função: 'Carros de Passeio' -> \`passengerCars\`, 'Caminhonetes'/'SUVs' -> \`suvs\`, 'Pick-Ups' -> \`pickups\`, 'Veículos Pesados'/'Caminhões' -> \`heavyVehicles\`.
     *   Chame a função com as quantidades corretas. Ex: \`calculatePrice({ passengerCars: 3, suvs: 2 })\`.
     *   Sua resposta em texto DEVE resumir o pedido e o resultado. Por exemplo: "O valor para 3 carros de passeio e 2 caminhonetes é R$ 350,00. Veja o detalhamento:"
+
+*   **showPaymentMethods()**: Use esta função SEMPRE que o cliente perguntar sobre 'formas de pagamento', 'como pagar', 'aceita cartão' ou 'aceita pix'. A sua resposta em texto DEVE ser algo como: "Aceitamos diversas formas de pagamento para sua conveniência. Veja as opções:"
 
 **REGRAS DE FUNCIONAMENTO:**
 
@@ -104,6 +111,10 @@ const functionDeclarations: FunctionDeclaration[] = [
                 }
             }
         }
+    },
+    {
+        name: 'showPaymentMethods',
+        description: 'Mostra as formas de pagamento aceitas, como cartões e PIX.',
     }
 ];
 
