@@ -1,13 +1,20 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { PRICING_DATA, galleryImages } from '../constants';
 import { PricingOption } from '../types';
 
+interface CalculationDetails {
+    items: {
+        option: PricingOption;
+        quantity: number;
+    }[];
+    total: number;
+}
 interface ChatMessage {
     role: 'model' | 'user';
     text: string;
     pricing?: PricingOption[];
     gallery?: typeof galleryImages;
+    calculation?: CalculationDetails;
 }
 
 const SendIcon = () => (
@@ -40,6 +47,25 @@ const ChatPricingCard: React.FC<{ option: PricingOption }> = ({ option }) => (
 const ChatGalleryImage: React.FC<{ src: string, alt: string }> = ({ src, alt }) => (
     <div className="aspect-square overflow-hidden rounded-md">
         <img src={src} alt={alt} className="w-full h-full object-cover" />
+    </div>
+);
+
+const ChatCalculationCard: React.FC<{ calculation: CalculationDetails }> = ({ calculation }) => (
+    <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50">
+        <h4 className="font-bold text-white mb-2">Resumo do Orçamento:</h4>
+        {calculation.items.map(({ option, quantity }) => (
+            <div key={option.vehicleType} className="flex justify-between items-center text-sm mb-1 text-white/90">
+                <span>{quantity}x {option.vehicleType}</span>
+                <span>R$ {(option.price * quantity).toFixed(2).replace('.', ',')}</span>
+            </div>
+        ))}
+        <div className="mt-3 pt-2 border-t border-[#169d99]/50 flex justify-between items-center">
+            <span className="font-bold text-white">Total:</span>
+            <span className="text-2xl font-black text-white">
+                <span className="text-lg text-[#b9cc01] align-top">R$</span>
+                {calculation.total.toFixed(2).replace('.', ',')}
+            </span>
+        </div>
     </div>
 );
 
@@ -117,6 +143,39 @@ const Chatbot: React.FC = () => {
                     }
                     if (fc.name === 'showGallery') {
                         aiResponseMessage.gallery = galleryImages;
+                    }
+                    if (fc.name === 'calculatePrice') {
+                        const args = fc.args as { passengerCars?: number; suvs?: number; pickups?: number; heavyVehicles?: number };
+                        
+                        const calculationDetails: CalculationDetails = {
+                            items: [],
+                            total: 0,
+                        };
+
+                        const priceMap: { [key: string]: PricingOption } = {
+                            'Carros de Passeio': PRICING_DATA.find(p => p.vehicleType === 'Carros de Passeio')!,
+                            'Caminhonetes': PRICING_DATA.find(p => p.vehicleType === 'Caminhonetes')!,
+                            'Pick-Ups': PRICING_DATA.find(p => p.vehicleType === 'Pick-Ups')!,
+                            'Veículos Pesados': PRICING_DATA.find(p => p.vehicleType === 'Veículos Pesados')!,
+                        };
+
+                        const vehicleTypes = {
+                            passengerCars: 'Carros de Passeio',
+                            suvs: 'Caminhonetes',
+                            pickups: 'Pick-Ups',
+                            heavyVehicles: 'Veículos Pesados',
+                        } as const;
+
+                        for (const [key, vehicleType] of Object.entries(vehicleTypes)) {
+                            const quantity = args[key as keyof typeof args];
+                            if (quantity && quantity > 0) {
+                                const option = priceMap[vehicleType];
+                                calculationDetails.items.push({ option, quantity });
+                                calculationDetails.total += option.price * quantity;
+                            }
+                        }
+                        
+                        aiResponseMessage.calculation = calculationDetails;
                     }
                 }
             }
@@ -203,6 +262,9 @@ const Chatbot: React.FC = () => {
                                     <div className="mt-3 grid grid-cols-2 gap-2">
                                         {msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}
                                     </div>
+                                )}
+                                {msg.calculation && (
+                                    <ChatCalculationCard calculation={msg.calculation} />
                                 )}
                             </div>
                         </div>

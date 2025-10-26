@@ -46,6 +46,12 @@ Você é o assistente virtual da AquaClean Car Wash. Sua principal função é r
 
 *   **showGallery()**: Use esta função SEMPRE que o cliente pedir para ver 'fotos', 'imagens', 'trabalhos anteriores', 'galeria' ou 'exemplos'. Você PODE e DEVE adicionar um texto introdutorio antes de chamar a função. Por exemplo: "Com certeza! Veja alguns exemplos do nosso trabalho:"
 
+*   **calculatePrice({passengerCars: QTD, suvs: QTD, pickups: QTD, heavyVehicles: QTD})**: Use esta função para calcular o valor total de múltiplas lavagens.
+    *   Você DEVE identificar a quantidade e o tipo de cada veículo mencionado pelo cliente. Por exemplo, "quanto fica para lavar 3 carros e 2 caminhonetes?".
+    *   Mapeie os tipos de veículo para os parâmetros da função: 'Carros de Passeio' -> \`passengerCars\`, 'Caminhonetes'/'SUVs' -> \`suvs\`, 'Pick-Ups' -> \`pickups\`, 'Veículos Pesados'/'Caminhões' -> \`heavyVehicles\`.
+    *   Chame a função com as quantidades corretas. Ex: \`calculatePrice({ passengerCars: 3, suvs: 2 })\`.
+    *   Sua resposta em texto DEVE resumir o pedido e o resultado. Por exemplo: "O valor para 3 carros de passeio e 2 caminhonetes é R$ 350,00. Veja o detalhamento:"
+
 **REGRAS DE FUNCIONAMENTO:**
 
 *   **Identificação de Veículo:** Sua principal tarefa é mapear modelos de veículos para as categorias de serviço corretas.
@@ -73,6 +79,31 @@ const functionDeclarations: FunctionDeclaration[] = [
     {
         name: 'showGallery',
         description: 'Mostra a galeria de fotos com exemplos de antes e depois dos serviços de lavagem.',
+    },
+    {
+        name: 'calculatePrice',
+        description: 'Calcula o preço total para lavar múltiplos veículos de diferentes categorias. Use esta função quando o cliente pedir um orçamento para mais de um veículo.',
+        parameters: {
+            type: Type.OBJECT,
+            properties: {
+                passengerCars: {
+                    type: Type.NUMBER,
+                    description: 'Quantidade de Carros de Passeio a serem lavados.',
+                },
+                suvs: {
+                    type: Type.NUMBER,
+                    description: 'Quantidade de Caminhonetes (SUVs) a serem lavados.',
+                },
+                pickups: {
+                    type: Type.NUMBER,
+                    description: 'Quantidade de Pick-Ups a serem lavados.',
+                },
+                heavyVehicles: {
+                    type: Type.NUMBER,
+                    description: 'Quantidade de Veículos Pesados a serem lavados.',
+                }
+            }
+        }
     }
 ];
 
