@@ -98,27 +98,62 @@ const ChatPaymentInfoCard: React.FC = () => (
     </div>
 );
 
-const ChatComplaintCard: React.FC<{ onSelect: (type: string) => void }> = ({ onSelect }) => {
+const ChatComplaintCard: React.FC = () => {
     const complaintTypes = ['Atendimento', 'Financeiro', 'Serviço (Sujeira ou Avaria)', 'Atraso', 'Outro'];
-    const whatsAppComplaintText = encodeURIComponent("Olá, gostaria de fazer uma reclamação.");
-    const whatsAppLink = `https://wa.me/5562991619560?text=${whatsAppComplaintText}`;
-    
+    const [selectedType, setSelectedType] = useState<string | null>(null);
+    const [otherDescription, setOtherDescription] = useState('');
+
+    const handleSelectType = (type: string) => {
+        setSelectedType(type === selectedType ? null : type);
+        if (type !== 'Outro') {
+            setOtherDescription('');
+        }
+    };
+
+    const isWhatsAppDisabled = !selectedType || (selectedType === 'Outro' && !otherDescription.trim());
+
+    const generateWhatsAppLink = () => {
+        let baseText = "Olá, gostaria de fazer uma reclamação";
+        if (selectedType && selectedType !== 'Outro') {
+            baseText += ` sobre: ${selectedType}.`;
+        } else if (selectedType === 'Outro' && otherDescription.trim()) {
+            baseText += `: ${otherDescription.trim()}`;
+        }
+        return `https://wa.me/5562991619560?text=${encodeURIComponent(baseText)}`;
+    };
+
     return (
         <div className="p-3 bg-[#ab0768]/20 rounded-lg mt-3 border border-[#ab0768]/50 space-y-2">
             {complaintTypes.map(type => (
                 <button 
                     key={type} 
-                    onClick={() => onSelect(type)}
-                    className="w-full text-left text-sm bg-[#fae894]/20 text-white font-bold py-2 px-3 rounded-md hover:bg-[#fae894]/40 transition-all"
+                    onClick={() => handleSelectType(type)}
+                    className={`w-full text-left text-sm text-white font-bold py-2 px-3 rounded-md transition-all ${selectedType === type ? 'bg-[#fae894]/40 border border-white/50' : 'bg-[#fae894]/20 hover:bg-[#fae894]/30'}`}
                 >
                     {type}
                 </button>
             ))}
+
+            {selectedType === 'Outro' && (
+                <div className="mt-2">
+                    <textarea
+                        value={otherDescription}
+                        onChange={(e) => setOtherDescription(e.target.value)}
+                        placeholder="Por favor, descreva o problema aqui..."
+                        rows={3}
+                        className="w-full bg-[#070743] text-white placeholder-[#fae894]/50 text-sm p-2 rounded-md border-2 border-[#ab0768]/50 focus:border-[#fae894] focus:outline-none transition-colors"
+                        aria-label="Descrição da reclamação"
+                    />
+                </div>
+            )}
+
             <a 
-                href={whatsAppLink} 
+                href={isWhatsAppDisabled ? '#' : generateWhatsAppLink()} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="w-full text-sm bg-[#25D366] text-white font-bold py-2 px-3 rounded-md hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 mt-2"
+                onClick={(e) => { if (isWhatsAppDisabled) e.preventDefault(); }}
+                aria-disabled={isWhatsAppDisabled}
+                className={`w-full text-sm bg-[#25D366] text-white font-bold py-2 px-3 rounded-md transition-all flex items-center justify-center gap-2 mt-2 ${isWhatsAppDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-opacity-90'}`}
             >
                 <WhatsAppIcon className="h-4 w-4" />
                 Enviar Reclamação via WhatsApp
@@ -126,6 +161,7 @@ const ChatComplaintCard: React.FC<{ onSelect: (type: string) => void }> = ({ onS
         </div>
     );
 };
+
 
 const ChatRatingCard: React.FC<{ onSelect: (rating: string) => void }> = ({ onSelect }) => {
     const ratings = [
@@ -283,10 +319,6 @@ const Chatbot: React.FC = () => {
         callChatApi(text);
     };
 
-    const handleComplaintSelection = (complaintType: string) => {
-        handleQuickReply(`Minha reclamação é sobre: ${complaintType}`, msg => ({...msg, complaintOptions: false}));
-    };
-
     const handleRatingSelection = (ratingText: string) => {
         handleQuickReply(ratingText, msg => ({...msg, ratingPrompt: false}));
     };
@@ -409,7 +441,7 @@ const Chatbot: React.FC = () => {
                                     )}
                                     {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
                                     {msg.paymentInfo && <ChatPaymentInfoCard />}
-                                    {msg.complaintOptions && <ChatComplaintCard onSelect={handleComplaintSelection} />}
+                                    {msg.complaintOptions && <ChatComplaintCard />}
                                     {msg.ratingPrompt && <ChatRatingCard onSelect={handleRatingSelection} />}
                                     {msg.promptForScheduling && (
                                         <div className="mt-3 pt-3 border-t border-[#169d99]/50">
