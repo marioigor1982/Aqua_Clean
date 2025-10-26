@@ -15,6 +15,8 @@ interface ChatMessage {
     pricing?: PricingOption[];
     gallery?: typeof galleryImages;
     calculation?: CalculationDetails;
+    promptForScheduling?: boolean;
+    whatsAppLink?: string;
 }
 
 const SendIcon = () => (
@@ -26,6 +28,13 @@ const SendIcon = () => (
 const CloseIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
 );
+
+const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = "h-5 w-5" }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01s-.521.074-.792.372c-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+    </svg>
+);
+
 
 const initialMessages: ChatMessage[] = [{ role: 'model', text: 'Olá! Sou o assistente virtual da AquaClean. Como posso ajudar?' }];
 
@@ -75,6 +84,8 @@ const Chatbot: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [conversationState, setConversationState] = useState<'idle' | 'awaiting_name'>('idle');
+    const [lastCalculation, setLastCalculation] = useState<CalculationDetails | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -91,10 +102,45 @@ const Chatbot: React.FC = () => {
                 setMessages(initialMessages);
                 setInputValue('');
                 setIsLoading(false);
+                setConversationState('idle');
+                setLastCalculation(null);
             }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
+
+    const handleConfirmScheduling = () => {
+        setMessages(prev => prev.map((msg, index) => {
+            if (index === prev.length - 1) {
+                return { ...msg, promptForScheduling: false };
+            }
+            return msg;
+        }));
+
+        const nextMessage: ChatMessage = {
+            role: 'model',
+            text: 'Ótimo! Para continuarmos, qual o seu nome?'
+        };
+        setMessages(prev => [...prev, nextMessage]);
+        setConversationState('awaiting_name');
+    };
+
+    const handleDenyScheduling = () => {
+        setMessages(prev => prev.map((msg, index) => {
+            if (index === prev.length - 1) {
+                return { ...msg, promptForScheduling: false };
+            }
+            return msg;
+        }));
+
+        const nextMessage: ChatMessage = {
+            role: 'model',
+            text: 'Entendido. Posso ajudar em algo mais?'
+        };
+        setMessages(prev => [...prev, nextMessage]);
+        setConversationState('idle');
+        setLastCalculation(null);
+    };
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,13 +148,39 @@ const Chatbot: React.FC = () => {
         if (!trimmedInput || isLoading) return;
 
         const userMessage: ChatMessage = { role: 'user', text: trimmedInput };
-        const newMessages = [...messages, userMessage];
-        setMessages(newMessages);
+        setMessages(prev => [...prev, userMessage]);
         setInputValue('');
+
+        if (conversationState === 'awaiting_name') {
+            setIsLoading(true);
+            const clientName = trimmedInput;
+            
+            setTimeout(() => {
+                if (lastCalculation) {
+                    const itemsText = lastCalculation.items.map(item => `${item.quantity}x ${item.option.vehicleType}`).join(' e ');
+                    const totalText = `R$ ${lastCalculation.total.toFixed(2).replace('.', ',')}`;
+                    
+                    const whatsAppMessage = `Olá, meu nome é ${clientName}. Gostaria de agendar a lavagem para: ${itemsText}. O orçamento total foi de ${totalText}. Vocês têm disponibilidade?`;
+                    const whatsAppUrl = `https://wa.me/5562991619560?text=${encodeURIComponent(whatsAppMessage)}`;
+
+                    const confirmationMessage: ChatMessage = {
+                        role: 'model',
+                        text: `Obrigado, ${clientName}! Sua solicitação de agendamento está pronta. Clique no botão abaixo para enviá-la pelo WhatsApp e finalizar.`,
+                        whatsAppLink: whatsAppUrl
+                    };
+                    setMessages(prev => [...prev, confirmationMessage]);
+                }
+                setConversationState('idle');
+                setLastCalculation(null);
+                setIsLoading(false);
+            }, 1000); // Simulate thinking
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            const history = newMessages.slice(1, -1).map(msg => ({
+            const history = messages.slice(1, -1).map(msg => ({
                 role: msg.role,
                 text: msg.text,
             }));
@@ -128,43 +200,22 @@ const Chatbot: React.FC = () => {
             }
 
             const geminiResponse = await response.json();
-
             const aiResponseMessage: ChatMessage = { role: 'model', text: geminiResponse.text || '' };
 
             if (geminiResponse.functionCalls && Array.isArray(geminiResponse.functionCalls)) {
                 for (const fc of geminiResponse.functionCalls) {
                     if (fc.name === 'showPricing') {
                         const vehicleType = fc.args?.vehicleType as string | undefined;
-                        if (vehicleType) {
-                            aiResponseMessage.pricing = PRICING_DATA.filter(p => p.vehicleType === vehicleType);
-                        } else {
-                            aiResponseMessage.pricing = PRICING_DATA;
-                        }
+                        aiResponseMessage.pricing = vehicleType ? PRICING_DATA.filter(p => p.vehicleType === vehicleType) : PRICING_DATA;
                     }
                     if (fc.name === 'showGallery') {
                         aiResponseMessage.gallery = galleryImages;
                     }
                     if (fc.name === 'calculatePrice') {
                         const args = fc.args as { passengerCars?: number; suvs?: number; pickups?: number; heavyVehicles?: number };
-                        
-                        const calculationDetails: CalculationDetails = {
-                            items: [],
-                            total: 0,
-                        };
-
-                        const priceMap: { [key: string]: PricingOption } = {
-                            'Carros de Passeio': PRICING_DATA.find(p => p.vehicleType === 'Carros de Passeio')!,
-                            'Caminhonetes': PRICING_DATA.find(p => p.vehicleType === 'Caminhonetes')!,
-                            'Pick-Ups': PRICING_DATA.find(p => p.vehicleType === 'Pick-Ups')!,
-                            'Veículos Pesados': PRICING_DATA.find(p => p.vehicleType === 'Veículos Pesados')!,
-                        };
-
-                        const vehicleTypes = {
-                            passengerCars: 'Carros de Passeio',
-                            suvs: 'Caminhonetes',
-                            pickups: 'Pick-Ups',
-                            heavyVehicles: 'Veículos Pesados',
-                        } as const;
+                        const calculationDetails: CalculationDetails = { items: [], total: 0 };
+                        const priceMap = PRICING_DATA.reduce((acc, p) => ({ ...acc, [p.vehicleType]: p }), {} as { [key: string]: PricingOption });
+                        const vehicleTypes = { passengerCars: 'Carros de Passeio', suvs: 'Caminhonetes', pickups: 'Pick-Ups', heavyVehicles: 'Veículos Pesados' } as const;
 
                         for (const [key, vehicleType] of Object.entries(vehicleTypes)) {
                             const quantity = args[key as keyof typeof args];
@@ -176,6 +227,8 @@ const Chatbot: React.FC = () => {
                         }
                         
                         aiResponseMessage.calculation = calculationDetails;
+                        aiResponseMessage.promptForScheduling = true;
+                        setLastCalculation(calculationDetails);
                     }
                 }
             }
@@ -184,40 +237,20 @@ const Chatbot: React.FC = () => {
 
         } catch (error) {
             console.error("Erro ao se comunicar com a API do chat:", error);
-            const errorMessage = error instanceof Error 
-                ? error.message 
-                : 'Não foi possível conectar ao assistente. Por favor, tente novamente mais tarde.';
-            
-            setMessages(prevMessages => [...prevMessages, { 
-                role: 'model', 
-                text: `Desculpe, ocorreu um erro. Tente novamente.\n\nDetalhes técnicos: ${errorMessage}` 
-            }]);
+            const errorMessage = error instanceof Error ? error.message : 'Não foi possível conectar ao assistente.';
+            setMessages(prevMessages => [...prevMessages, { role: 'model', text: `Desculpe, ocorreu um erro. Tente novamente.` }]);
         } finally {
             setIsLoading(false);
         }
     };
     
     const formatMessageText = (text: string) => {
-        const linkify = (inputText: string) => {
-            const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-            const emailPattern = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
-
-            let linkedText = inputText.replace(urlPattern, (url) => {
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#00eaff] hover:underline">${url}</a>`;
-            });
-            
-            linkedText = linkedText.replace(emailPattern, (email) => {
-                if (linkedText.includes(`href="mailto:${email}"`)) return email;
-                return `<a href="mailto:${email}" class="text-[#00eaff] hover:underline">${email}</a>`;
-            });
-
-            return linkedText;
-        };
-        
-        const linkedText = linkify(text);
+        const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        const emailPattern = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+        let linkedText = text.replace(urlPattern, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[#00eaff] hover:underline">${url}</a>`);
+        linkedText = linkedText.replace(emailPattern, email => `<a href="mailto:${email}" class="text-[#00eaff] hover:underline">${email}</a>`);
         return linkedText.replace(/\n/g, '<br />');
     };
-
 
     return (
         <>
@@ -229,11 +262,7 @@ const Chatbot: React.FC = () => {
                  <span className="bg-[#169d99] text-white text-lg font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 ease-in-out transform scale-0 opacity-0 group-hover:scale-100 group-hover:opacity-100 origin-right">
                     Fale com a nossa IA
                 </span>
-                <img 
-                    src="https://i.postimg.cc/j5bjQmg7/IA-ROBO.png" 
-                    alt="Ícone do assistente de IA" 
-                    className="w-20 h-20 transition-transform duration-300 group-hover:scale-110" 
-                />
+                <img src="https://i.postimg.cc/j5bjQmg7/IA-ROBO.png" alt="Ícone do assistente de IA" className="w-20 h-20 transition-transform duration-300 group-hover:scale-110" />
             </button>
 
             <div className={`fixed bottom-8 right-4 md:right-8 z-50 w-[calc(100vw-2rem)] md:w-full max-w-sm h-[70vh] max-h-[600px] bg-[#0a0a5c] rounded-2xl shadow-2xl border-2 border-[#169d99] flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
@@ -242,9 +271,7 @@ const Chatbot: React.FC = () => {
                         <img src="https://i.postimg.cc/j5bjQmg7/IA-ROBO.png" alt="Logo do assistente IA" className="w-10 h-10" />
                         <h3 className="font-bold text-lg text-white">Assistente AquaClean</h3>
                     </div>
-                    <button onClick={() => setIsOpen(false)} aria-label="Fechar chat" className="text-white hover:text-[#fae894]">
-                        <CloseIcon />
-                    </button>
+                    <button onClick={() => setIsOpen(false)} aria-label="Fechar chat" className="text-white hover:text-[#fae894]"><CloseIcon /></button>
                 </header>
 
                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
@@ -252,19 +279,25 @@ const Chatbot: React.FC = () => {
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] rounded-lg px-4 py-2 shadow ${msg.role === 'user' ? 'bg-[#169d99] text-white rounded-br-none' : 'bg-[#070743] text-[#fae894] rounded-bl-none'}`}>
                                 {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
-                                {msg.pricing && (
+                                {msg.pricing && <div className="mt-3">{msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}</div>}
+                                {msg.gallery && <div className="mt-3 grid grid-cols-2 gap-2">{msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}</div>}
+                                {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
+                                {msg.promptForScheduling && (
+                                    <div className="mt-3 pt-3 border-t border-[#169d99]/50">
+                                        <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>
+                                        <div className="flex gap-2">
+                                            <button onClick={handleConfirmScheduling} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                            <button onClick={handleDenyScheduling} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                                        </div>
+                                    </div>
+                                )}
+                                {msg.whatsAppLink && (
                                     <div className="mt-3">
-                                        {msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}
+                                        <a href={msg.whatsAppLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold py-2 px-4 rounded-full hover:bg-opacity-90 transition-all w-full">
+                                            <WhatsAppIcon />
+                                            Confirmar Agendamento
+                                        </a>
                                     </div>
-
-                                )}
-                                {msg.gallery && (
-                                    <div className="mt-3 grid grid-cols-2 gap-2">
-                                        {msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}
-                                    </div>
-                                )}
-                                {msg.calculation && (
-                                    <ChatCalculationCard calculation={msg.calculation} />
                                 )}
                             </div>
                         </div>
@@ -289,7 +322,7 @@ const Chatbot: React.FC = () => {
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Digite sua dúvida..."
+                            placeholder={conversationState === 'awaiting_name' ? 'Digite seu nome...' : 'Digite sua dúvida...'}
                             aria-label="Caixa de mensagem"
                             className="w-full bg-transparent text-white placeholder-[#fae894]/50 px-4 py-2 focus:outline-none"
                             disabled={isLoading}
