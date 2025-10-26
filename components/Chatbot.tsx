@@ -21,6 +21,7 @@ interface ChatMessage {
     promptForEndChat?: boolean;
     complaintOptions?: boolean;
     ratingPrompt?: boolean;
+    promptForClientStatus?: boolean;
 }
 
 const SendIcon = () => (
@@ -162,8 +163,7 @@ const ChatComplaintCard: React.FC = () => {
     );
 };
 
-
-const ChatRatingCard: React.FC<{ onSelect: (rating: string) => void }> = ({ onSelect }) => {
+const ChatRatingCard: React.FC = () => {
     const ratings = [
         { score: 5, label: 'Excelente', icon: '⭐⭐⭐⭐⭐' },
         { score: 4, label: 'Ótimo', icon: '⭐⭐⭐⭐' },
@@ -173,22 +173,85 @@ const ChatRatingCard: React.FC<{ onSelect: (rating: string) => void }> = ({ onSe
         { score: 0, label: 'Péssimo', icon: '👎' }
     ];
 
+    const [selectedRating, setSelectedRating] = useState<(typeof ratings)[0] | null>(null);
+    const [comment, setComment] = useState('');
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleSelectRating = (rating: (typeof ratings)[0]) => {
+        setSelectedRating(rating);
+    };
+
+    const generateWhatsAppLink = () => {
+        if (!selectedRating) return '#';
+        let text = `Olá! Gostaria de deixar minha avaliação sobre o serviço da AquaClean.\n\n*Avaliação:* ${selectedRating.label} ${selectedRating.icon}`;
+        if (comment.trim() !== '') {
+            text += `\n*Comentário:* ${comment.trim()}`;
+        }
+        return `https://wa.me/5562991619560?text=${encodeURIComponent(text)}`;
+    };
+    
+    const handleSubmit = () => {
+        setSubmitted(true);
+    };
+
+    if (submitted) {
+        return (
+            <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50">
+                <p className="text-sm text-center text-white font-semibold">Agradecemos imensamente pelo seu feedback!</p>
+            </div>
+        );
+    }
+    
+    if (!selectedRating) {
+        return (
+            <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50 space-y-2">
+                {ratings.map((rating) => (
+                    <button 
+                        key={rating.score}
+                        onClick={() => handleSelectRating(rating)}
+                        className="w-full text-left text-sm bg-[#fae894]/20 text-white font-semibold py-2 px-3 rounded-md hover:bg-[#fae894]/40 transition-all flex justify-between items-center"
+                    >
+                        <span>{rating.label}</span>
+                        <span>{rating.icon}</span>
+                    </button>
+                ))}
+            </div>
+        );
+    }
+    
     return (
-        <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50 space-y-2">
-            {ratings.map(({ score, label, icon }) => (
-                <button 
-                    key={score}
-                    onClick={() => onSelect(`Minha avaliação: ${score} - ${label} ${icon}`)}
-                    className="w-full text-left text-sm bg-[#fae894]/20 text-white font-semibold py-2 px-3 rounded-md hover:bg-[#fae894]/40 transition-all flex justify-between items-center"
-                >
-                    <span>{label}</span>
-                    <span>{icon}</span>
-                </button>
-            ))}
+        <div className="p-3 bg-[#169d99]/20 rounded-lg mt-3 border border-[#169d99]/50 space-y-3">
+            <div>
+                <p className="text-sm text-white/80">Sua avaliação:</p>
+                <div className="w-full text-left text-sm bg-[#fae894]/20 text-white font-semibold py-2 px-3 rounded-md flex justify-between items-center">
+                    <span>{selectedRating.label}</span>
+                    <span>{selectedRating.icon}</span>
+                </div>
+                <button onClick={() => setSelectedRating(null)} className="text-xs text-[#00eaff] hover:underline mt-1">Alterar avaliação</button>
+            </div>
+            <div>
+                <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Deixe um comentário (opcional)..."
+                    rows={3}
+                    className="w-full bg-[#070743] text-white placeholder-[#fae894]/50 text-sm p-2 rounded-md border-2 border-[#169d99]/50 focus:border-[#fae894] focus:outline-none transition-colors"
+                    aria-label="Comentário da avaliação"
+                />
+            </div>
+            <a 
+                href={generateWhatsAppLink()}
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onClick={handleSubmit}
+                className="w-full text-sm bg-[#25D366] text-white font-bold py-2 px-3 rounded-md transition-all flex items-center justify-center gap-2 hover:bg-opacity-90"
+            >
+                <WhatsAppIcon className="h-4 w-4" />
+                Enviar Avaliação via WhatsApp
+            </a>
         </div>
     );
 };
-
 
 const Chatbot: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -295,6 +358,9 @@ const Chatbot: React.FC = () => {
                     if (fc.name === 'promptForRating') {
                         aiResponseMessage.ratingPrompt = true;
                     }
+                    if (fc.name === 'promptForClientStatus') {
+                        aiResponseMessage.promptForClientStatus = true;
+                    }
                 }
             }
             
@@ -319,8 +385,8 @@ const Chatbot: React.FC = () => {
         callChatApi(text);
     };
 
-    const handleRatingSelection = (ratingText: string) => {
-        handleQuickReply(ratingText, msg => ({...msg, ratingPrompt: false}));
+    const handleClientStatusReply = (text: string) => {
+        handleQuickReply(text, msg => ({ ...msg, promptForClientStatus: false }));
     };
 
     const handleConfirmScheduling = () => {
@@ -442,7 +508,15 @@ const Chatbot: React.FC = () => {
                                     {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
                                     {msg.paymentInfo && <ChatPaymentInfoCard />}
                                     {msg.complaintOptions && <ChatComplaintCard />}
-                                    {msg.ratingPrompt && <ChatRatingCard onSelect={handleRatingSelection} />}
+                                    {msg.ratingPrompt && <ChatRatingCard />}
+                                    {msg.promptForClientStatus && (
+                                        <div className="mt-3 pt-3 border-t border-[#169d99]/50">
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleClientStatusReply('Sim, já utilizei')} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                                <button onClick={() => handleClientStatusReply('Não, ainda não')} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                                            </div>
+                                        </div>
+                                    )}
                                     {msg.promptForScheduling && (
                                         <div className="mt-3 pt-3 border-t border-[#169d99]/50">
                                             <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>
