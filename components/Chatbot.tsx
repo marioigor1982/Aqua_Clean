@@ -18,6 +18,7 @@ interface ChatMessage {
     promptForScheduling?: boolean;
     whatsAppLink?: string;
     paymentInfo?: boolean;
+    promptForEndChat?: boolean;
 }
 
 const SendIcon = () => (
@@ -101,7 +102,7 @@ const Chatbot: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [conversationState, setConversationState] = useState<'idle' | 'awaiting_name'>('idle');
+    const [conversationState, setConversationState] = useState<'idle' | 'awaiting_name' | 'awaiting_end_confirmation'>('idle');
     const [lastCalculation, setLastCalculation] = useState<CalculationDetails | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -152,11 +153,32 @@ const Chatbot: React.FC = () => {
 
         const nextMessage: ChatMessage = {
             role: 'model',
-            text: 'De nada! Para agendar, ou se tiver mais alguma dúvida, você pode nos chamar no WhatsApp: https://wa.me/5562991619560 ou ligar para (62) 99161-9560.'
+            text: 'Ok então, precisando de mais informações estarei por aqui para ajudar! Caso tenha mais alguma dúvida, você pode nos chamar no WhatsApp: https://wa.me/5562991619560 ou ligar para (62) 99161-9560.\n\nDeseja encerrar o atendimento?',
+            promptForEndChat: true,
+        };
+        setMessages(prev => [...prev, nextMessage]);
+        setConversationState('awaiting_end_confirmation');
+        setLastCalculation(null);
+    };
+
+    const handleConfirmEndChat = () => {
+        setIsOpen(false);
+    };
+
+    const handleDenyEndChat = () => {
+        setMessages(prev => prev.map((msg, index) => {
+            if (index === prev.length - 1) {
+                return { ...msg, promptForEndChat: false };
+            }
+            return msg;
+        }));
+
+        const nextMessage: ChatMessage = {
+            role: 'model',
+            text: 'Ok, sem problemas. Como mais posso ajudar?'
         };
         setMessages(prev => [...prev, nextMessage]);
         setConversationState('idle');
-        setLastCalculation(null);
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -306,37 +328,59 @@ const Chatbot: React.FC = () => {
                 </header>
 
                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
-                    {messages.map((msg, index) => (
-                        <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] rounded-lg px-4 py-2 shadow ${msg.role === 'user' ? 'bg-[#169d99] text-white rounded-br-none' : 'bg-[#070743] text-[#fae894] rounded-bl-none'}`}>
-                                {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
-                                {msg.pricing && <div className="mt-3">{msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}</div>}
-                                {msg.gallery && <div className="mt-3 grid grid-cols-2 gap-2">{msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}</div>}
-                                {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
-                                {msg.paymentInfo && <ChatPaymentInfoCard />}
-                                {msg.promptForScheduling && (
-                                    <div className="mt-3 pt-3 border-t border-[#169d99]/50">
-                                        <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>
-                                        <div className="flex gap-2">
-                                            <button onClick={handleConfirmScheduling} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
-                                            <button onClick={handleDenyScheduling} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                    {messages.map((msg, index) => {
+                        if (msg.role === 'user') {
+                            return (
+                                <div key={index} className="flex justify-end">
+                                    <div className="max-w-[85%] rounded-lg px-4 py-2 shadow bg-[#169d99] text-white rounded-br-none">
+                                        {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // AI Model's message
+                        return (
+                             <div key={index} className="flex items-end gap-2 justify-start">
+                                <img src="https://i.postimg.cc/hQ0F6V6N/AQUACLEAN-LOGO.png" alt="AquaClean Logo" className="w-8 h-8 rounded-full flex-shrink-0" />
+                                <div className="max-w-[85%] rounded-lg px-4 py-2 shadow bg-[#070743] text-[#fae894] rounded-bl-none">
+                                    {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
+                                    {msg.pricing && <div className="mt-3">{msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}</div>}
+                                    {msg.gallery && <div className="mt-3 grid grid-cols-2 gap-2">{msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}</div>}
+                                    {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
+                                    {msg.paymentInfo && <ChatPaymentInfoCard />}
+                                    {msg.promptForScheduling && (
+                                        <div className="mt-3 pt-3 border-t border-[#169d99]/50">
+                                            <p className="text-sm text-white/90 mb-2">Deseja prosseguir com o agendamento?</p>
+                                            <div className="flex gap-2">
+                                                <button onClick={handleConfirmScheduling} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                                <button onClick={handleDenyScheduling} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                {msg.whatsAppLink && (
-                                    <div className="mt-3">
-                                        <a href={msg.whatsAppLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold py-2 px-4 rounded-full hover:bg-opacity-90 transition-all w-full">
-                                            <WhatsAppIcon />
-                                            Confirmar Agendamento
-                                        </a>
-                                    </div>
-                                )}
+                                    )}
+                                     {msg.promptForEndChat && (
+                                        <div className="mt-3 pt-3 border-t border-[#169d99]/50">
+                                            <div className="flex gap-2">
+                                                <button onClick={handleConfirmEndChat} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                                <button onClick={handleDenyEndChat} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {msg.whatsAppLink && (
+                                        <div className="mt-3">
+                                            <a href={msg.whatsAppLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold py-2 px-4 rounded-full hover:bg-opacity-90 transition-all w-full">
+                                                <WhatsAppIcon />
+                                                Confirmar Agendamento
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {isLoading && (
-                        <div className="flex justify-start">
-                             <div className="max-w-xs rounded-lg px-4 py-2 bg-[#070743] text-[#fae894] rounded-bl-none">
+                        <div className="flex items-end gap-2 justify-start">
+                            <img src="https://i.postimg.cc/hQ0F6V6N/AQUACLEAN-LOGO.png" alt="AquaClean Logo" className="w-8 h-8 rounded-full flex-shrink-0" />
+                            <div className="max-w-xs rounded-lg px-4 py-2 bg-[#070743] text-[#fae894] rounded-bl-none">
                                 <div className="flex items-center space-x-2">
                                     <div className="w-2 h-2 bg-[#fae894] rounded-full animate-pulse"></div>
                                     <div className="w-2 h-2 bg-[#fae894] rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
@@ -354,10 +398,14 @@ const Chatbot: React.FC = () => {
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            placeholder={conversationState === 'awaiting_name' ? 'Digite seu nome...' : 'Digite sua dúvida...'}
+                            placeholder={
+                                conversationState === 'awaiting_name' ? 'Digite seu nome...' :
+                                conversationState === 'awaiting_end_confirmation' ? 'Responda acima...' :
+                                'Digite sua dúvida...'
+                            }
                             aria-label="Caixa de mensagem"
                             className="w-full bg-transparent text-white placeholder-[#fae894]/50 px-4 py-2 focus:outline-none"
-                            disabled={isLoading}
+                            disabled={isLoading || conversationState === 'awaiting_end_confirmation'}
                         />
                         <button type="submit" aria-label="Enviar mensagem" className="p-3 text-white disabled:text-gray-500 hover:text-[#b9cc01] transition-colors" disabled={isLoading}>
                             <SendIcon />
