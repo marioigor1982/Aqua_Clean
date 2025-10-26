@@ -55,9 +55,9 @@ const ChatPricingCard: React.FC<{ option: PricingOption }> = ({ option }) => (
     </div>
 );
 
-const ChatGalleryImage: React.FC<{ src: string, alt: string }> = ({ src, alt }) => (
-    <div className="aspect-square overflow-hidden rounded-md">
-        <img src={src} alt={alt} className="w-full h-full object-cover" />
+const ChatGalleryImage: React.FC<{ src: string, alt: string, onClick: () => void }> = ({ src, alt, onClick }) => (
+    <div className="aspect-square overflow-hidden rounded-md cursor-pointer group" onClick={onClick}>
+        <img src={src} alt={alt} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
     </div>
 );
 
@@ -104,6 +104,7 @@ const Chatbot: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [conversationState, setConversationState] = useState<'idle' | 'awaiting_name' | 'awaiting_end_confirmation'>('idle');
     const [lastCalculation, setLastCalculation] = useState<CalculationDetails | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -122,6 +123,7 @@ const Chatbot: React.FC = () => {
                 setIsLoading(false);
                 setConversationState('idle');
                 setLastCalculation(null);
+                setSelectedImage(null);
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -345,7 +347,18 @@ const Chatbot: React.FC = () => {
                                 <div className="max-w-[85%] rounded-lg px-4 py-2 shadow bg-[#070743] text-[#fae894] rounded-bl-none">
                                     {msg.text && <p className="text-sm" dangerouslySetInnerHTML={{ __html: formatMessageText(msg.text) }} />}
                                     {msg.pricing && <div className="mt-3">{msg.pricing.map(p => <ChatPricingCard key={p.vehicleType} option={p} />)}</div>}
-                                    {msg.gallery && <div className="mt-3 grid grid-cols-2 gap-2">{msg.gallery.slice(0, 4).map((img, i) => <ChatGalleryImage key={i} src={img.src} alt={img.alt} />)}</div>}
+                                    {msg.gallery && (
+                                        <div className="mt-3 grid grid-cols-3 gap-2">
+                                            {msg.gallery.map((img, i) => (
+                                                <ChatGalleryImage 
+                                                    key={i} 
+                                                    src={img.src} 
+                                                    alt={img.alt} 
+                                                    onClick={() => setSelectedImage(img.src)}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                     {msg.calculation && <ChatCalculationCard calculation={msg.calculation} />}
                                     {msg.paymentInfo && <ChatPaymentInfoCard />}
                                     {msg.promptForScheduling && (
@@ -413,6 +426,24 @@ const Chatbot: React.FC = () => {
                     </div>
                 </form>
             </div>
+
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-fadeIn"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div className="relative max-w-3xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                        <img src={selectedImage} alt="Imagem ampliada" className="rounded-lg object-contain max-w-full max-h-[90vh]" />
+                        <button 
+                            onClick={() => setSelectedImage(null)} 
+                            className="absolute -top-3 -right-3 bg-white text-black rounded-full h-8 w-8 flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                            aria-label="Fechar imagem"
+                        >
+                            <CloseIcon />
+                        </button>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
