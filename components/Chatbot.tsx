@@ -22,6 +22,7 @@ interface ChatMessage {
     complaintOptions?: boolean;
     ratingPrompt?: boolean;
     promptForClientStatus?: boolean;
+    promptForMoreHelp?: boolean;
 }
 
 const SendIcon = () => (
@@ -361,6 +362,13 @@ const Chatbot: React.FC = () => {
                     if (fc.name === 'promptForClientStatus') {
                         aiResponseMessage.promptForClientStatus = true;
                     }
+                    if (fc.name === 'promptForMoreHelp') {
+                        aiResponseMessage.promptForMoreHelp = true;
+                    }
+                    if (fc.name === 'promptForEndChat') {
+                        aiResponseMessage.promptForEndChat = true;
+                        setConversationState('awaiting_end_confirmation');
+                    }
                 }
             }
             
@@ -396,8 +404,15 @@ const Chatbot: React.FC = () => {
 
     const handleDenyScheduling = () => {
         handleQuickReply('Não, obrigado.', msg => ({...msg, promptForScheduling: false}));
-        setConversationState('awaiting_end_confirmation');
         setLastCalculation(null);
+    };
+
+    const handleConfirmMoreHelp = () => {
+        handleQuickReply('Sim', msg => ({ ...msg, promptForMoreHelp: false }));
+    };
+
+    const handleDenyMoreHelp = () => {
+        handleQuickReply('Não', msg => ({ ...msg, promptForMoreHelp: false }));
     };
 
     const handleConfirmEndChat = () => setIsOpen(false);
@@ -526,10 +541,18 @@ const Chatbot: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
+                                     {msg.promptForMoreHelp && (
+                                        <div className="mt-3 pt-3 border-t border-[#169d99]/50">
+                                            <div className="flex gap-2">
+                                                <button onClick={handleConfirmMoreHelp} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                                <button onClick={handleDenyMoreHelp} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
+                                            </div>
+                                        </div>
+                                    )}
                                      {msg.promptForEndChat && (
                                         <div className="mt-3 pt-3 border-t border-[#169d99]/50">
                                             <div className="flex gap-2">
-                                                <button onClick={handleConfirmEndChat} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim</button>
+                                                <button onClick={handleConfirmEndChat} className="text-sm bg-[#b9cc01] text-[#070743] font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Sim, fechar o chat</button>
                                                 <button onClick={handleDenyEndChat} className="text-sm bg-[#fae894]/50 text-white font-bold py-1 px-4 rounded-full hover:bg-opacity-80 transition-all">Não</button>
                                             </div>
                                         </div>
