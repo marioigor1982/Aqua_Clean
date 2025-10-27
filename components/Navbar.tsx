@@ -35,8 +35,8 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { href: "#home", text: "Home", hoverColor: "hover:text-[#00eaff]", underlineColor: "bg-[#00eaff]" },
-    { href: "#about", text: "Sobre Nós", hoverColor: "hover:text-[#b9cc01]", underlineColor: "bg-[#b9cc01]" },
     { href: "#pricing", text: "Serviços", hoverColor: "hover:text-[#00eaff]", underlineColor: "bg-[#00eaff]" },
+    { href: "#about", text: "Sobre Nós", hoverColor: "hover:text-[#b9cc01]", underlineColor: "bg-[#b9cc01]" },
     { href: "#gallery", text: "Galeria", hoverColor: "hover:text-[#b9cc01]", underlineColor: "bg-[#b9cc01]" },
     { href: "#contact", text: "Contato", hoverColor: "hover:text-[#00eaff]", underlineColor: "bg-[#00eaff]" },
   ];

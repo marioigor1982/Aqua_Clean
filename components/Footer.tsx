@@ -58,8 +58,8 @@ const Footer: React.FC = () => {
                     <h3 className="text-xl font-bold uppercase text-[#fae894] mb-6 tracking-wider">Navegação</h3>
                     <ul className="space-y-4 text-sm">
                         <li><a href="#home" className="hover:text-[#169d99] transition-colors duration-300">Home</a></li>
-                        <li><a href="#about" className="hover:text-[#169d99] transition-colors duration-300">Sobre Nós</a></li>
                         <li><a href="#pricing" className="hover:text-[#169d99] transition-colors duration-300">Serviços</a></li>
+                        <li><a href="#about" className="hover:text-[#169d99] transition-colors duration-300">Sobre Nós</a></li>
                         <li><a href="#gallery" className="hover:text-[#169d99] transition-colors duration-300">Galeria</a></li>
                     </ul>
                 </div>
